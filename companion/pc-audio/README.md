@@ -2,7 +2,7 @@
 
 This companion is for the separate **Nuvio Legacy PC Audio** test app, based on
 Nuvio Legacy 2.0.8. The test IPK uses ID `space.nuvio.native.legacy.pcaudio`, version
-`2.0.82`, and a green/cyan PC-badged icon. It does not replace the original app.
+`2.0.83`, and a green/cyan PC-badged icon. It does not replace the original app.
 Install this IPK manually in webOS Dev Manager over the earlier PC Audio test
 app; the app ID stays the same. The original Nuvio Legacy stays separate.
 
@@ -41,6 +41,13 @@ fonts retain their license in `assets/FONT-LICENSE.txt`.
 - Normal audio plays directly on the TV, without contacting this server.
 - The enabled fallback starts after the TV identifies DTS/DTS-HD or TrueHD/MLP
   on a movie/episode. Trailers and live TV are not routed through it.
+- If the LG reports no audio tracks for three seconds after loading the video,
+  or rejects audio without identifying its codec, the PC inspects the original
+  file. This covers LG pipelines that hide unsupported audio entirely. Inspection
+  still converts only DTS/DTS-HD/TrueHD/MLP; known supported audio stays direct.
+- PC fallback takes priority over the TV's local DTS converter for that playback.
+  Turning PC fallback off restores the normal local conversion behavior. The
+  app does not run both converters or silently switch to local stereo on failure.
 - The PC selects English main audio, copies H.264/HEVC video, and converts
   unsupported audio to AC-3. 7.1 becomes 5.1; stereo and mono are not upmixed.
 - If the selected English audio is already supported, the server reports direct

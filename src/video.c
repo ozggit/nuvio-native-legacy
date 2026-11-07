@@ -1,5 +1,6 @@
 #include "app_id.h"
 #include "pcaudio.h"
+#include "pcaudio_detect.h"
 #include "video.h"
 #include "webosver.h"
 #include "audioinfo.h"
@@ -663,6 +664,7 @@ static char cabsHttp[512];
 static int pcEligible, pcConverted, pcPaused;
 static double pcOffset, pcDuration, pcSeek;
 static Uint32 pcSeekAt, pcLoadAt;
+static NvPcAudioDetection pcDetection;
 static int iniciarDts(int stream);
 static void bombearDts(void);
 static int dtsLiberadoNestaTv(void);
@@ -2341,6 +2343,7 @@ static int videoTocarLocal(const char *url);
 int video_tocar(const char *url) {
   pcaudio_parar();
   pcEligible = pcaudio_consumir(); pcConverted = pcPaused = 0;
+  memset(&pcDetection, 0, sizeof pcDetection);
   pcOffset = pcDuration = 0; pcSeekAt = pcLoadAt = 0;
   return videoTocarLocal(url);
 }
@@ -2401,8 +2404,15 @@ static int pcUnsupported(const VideoFaixa *track) {
 }
 static int pcPump(void) {
   PcAudioResult r;
-  if (pcEligible && !pcaudio_ativo() && !dtsTentou && !dtsSessao &&
-      pcUnsupported(video_audio(audioAtual))) {
+  const VideoFaixa *track = video_audio(audioAtual);
+  int reason = NV_PC_AUDIO_WAIT;
+  if (pcEligible && !pcaudio_ativo() && !dtsTentou && !dtsSessao && urlAtual[0])
+    reason = nv_pc_audio_detect(&pcDetection, pcUnsupported(track), nAudio > 0,
+                               track && track->codec[0], audioNaoSup, pronto, SDL_GetTicks());
+  else pcDetection.waiting = 0;
+  if (reason != NV_PC_AUDIO_WAIT) {
+    marco(reason == NV_PC_AUDIO_INSPECT ? "PC audio: native audio missing; inspecting on PC"
+                                        : "PC audio: unsupported codec; converting on PC");
     double start = (seekEm || seekEnvEm) ? seekAlvo : posSeg;
     pcDuration = durSeg; pcPaused = pausaPedida;
     // Capture source and headers before unloading the TV's rejected audio.
@@ -2884,6 +2894,7 @@ static int tocarInterno(const char *url, int comDV) {
 // video_bombear recarregaria a fonte velha depois de a tela ja ter fechado.
 void video_parar(void) {
   pcaudio_parar(); pcEligible = pcConverted = pcPaused = 0;
+  memset(&pcDetection, 0, sizeof pcDetection);
   pcOffset = pcDuration = 0; pcSeekAt = pcLoadAt = 0;
   nv_recon_zerar(&recon);
   reconErroPend = 0;

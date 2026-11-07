@@ -23,6 +23,8 @@ jobs:
           persist-credentials: false
       - name: Native session tests
         run: |
+          cc -Isrc -Wall -Wextra -Werror tests/pcaudio_detect.c -o /tmp/pcaudio-detect-test
+          /tmp/pcaudio-detect-test
           cc -DNV_WEBOS -Isrc -Wall -Wextra -Werror tests/pcaudio.c src/pcaudio.c src/js.c -lpthread -lm -o /tmp/pcaudio-test
           /tmp/pcaudio-test
           cc -DNV_WEBOS -Isrc -Wall -Wextra -Werror tests/pcpair.c src/pcpair.c src/js.c -lpthread -lm -o /tmp/pcpair-test
@@ -80,7 +82,7 @@ jobs:
           bash tools/build-pc-audio.sh --output "$GITHUB_WORKSPACE/build/pc-audio"
       - uses: actions/upload-artifact@v4
         with:
-          name: Nuvio-Legacy-PC-Audio-2.0.82
+          name: Nuvio-Legacy-PC-Audio-2.0.83
           path: |
             build/pc-audio/*.ipk
             build/pc-audio/*.sha256
