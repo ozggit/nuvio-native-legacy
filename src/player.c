@@ -1878,7 +1878,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   loadEm = SDL_GetTicks();
   { char px[96];
     if (url && *url) { memlog_evento("load"); memQuadroPendente = 1; }
-    pcaudio_armar(!ehCanal() && ajustes_pc_audio());
+    pcaudio_armar(url && *url && !ehCanal() && ajustes_pc_audio());
     comVideo = (url && *url && video_tocar(proxyts_resolver(url, px, sizeof px))); }
   zerarAssistido();
   mkvass_video_aberto(comVideo);

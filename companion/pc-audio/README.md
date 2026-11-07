@@ -9,8 +9,9 @@ Nuvio Legacy 2.0.8. The test IPK uses ID `space.nuvio.native.legacy.pcaudio`, ve
 1. Keep this folder together and run `Start.cmd`. Node 22+ and FFmpeg/FFprobe must
    be on PATH (already installed on the development PC).
 2. Open the pairing section on the local page at `http://127.0.0.1:8788`.
-3. In the test app: Playback → PC audio fallback → Pair PC audio server. Paste
-   the private pairing link, then enable PC audio fallback.
+3. In the test app: Settings → Playback → More options (or enable Advanced).
+   Under this TV's sound/video options, choose **Pair PC audio server**. Paste
+   the private pairing link, then enable **PC audio fallback (experimental)**.
 4. Browse Kaptain/Bingecat and select ordinary AIOStreams/TorBox sources normally.
    No add-on changes or media library are needed.
 5. The PC must be awake for unsupported-audio playback. `Stop.cmd` exits the
