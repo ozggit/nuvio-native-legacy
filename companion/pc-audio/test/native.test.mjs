@@ -85,6 +85,17 @@ test('native sessions: real DTS and TrueHD conversion, copied frames, seeks, hea
       assert.equal((await request(`/v1/sessions/${seekId}`,'DELETE')).status,200);
       assert.equal(native.status(),null);
     }
+    const timestampSource=path.join(directory,'timestamp-origin.mkv');
+    await run('ffmpeg',['-v','error','-y','-i',sourceFile,'-map','0:v','-map','0:a','-c','copy','-output_ts_offset','3',timestampSource]);
+    sourceFile=timestampSource;
+    const timestampProbe=await probe(sourceFile);assert.ok(Number(timestampProbe.format.start_time)>1);
+    const timestampId=await create(5.25),timestampSession=await ready(timestampId);
+    assert.ok(Math.abs(timestampSession.duration-10)<0.1,'Duration excludes timestamp origin.');
+    const timestampOutput=path.join(directory,'timestamp-output.ts');
+    await fs.writeFile(timestampOutput,Buffer.from(await(await fetch(base+timestampSession.path)).arrayBuffer()));
+    const originalFrames=await hashes(sourceFile),seekFrames=await hashes(timestampOutput);
+    const frameIndex=originalFrames.indexOf(seekFrames[0]);
+    assert.ok(frameIndex>=0&&Math.abs(frameIndex/24-timestampSession.start)<0.1,`Nonzero origin: reported ${timestampSession.start}, actual ${frameIndex/24}`);
     delayPrepare=true;const old=await create();await request(`/v1/sessions/${old}`,'DELETE');const fresh=await create();await ready(fresh);
     assert.equal(native.status().id,fresh,'Cancelled preparation cannot replace the new session.');
     await request(`/v1/sessions/${old}`,'DELETE');assert.equal(native.status().id,fresh,'Late stop cannot cancel a newer source.');

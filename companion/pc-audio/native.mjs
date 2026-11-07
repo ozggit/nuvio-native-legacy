@@ -13,7 +13,11 @@ export function planAudio(source, probe) {
   const convert = ['dts', 'truehd', 'mlp'].includes(audio.codec_name);
   if (convert && (!video || !['h264', 'hevc'].includes(video.codec_name)))
     throw problem('PC audio supports copied H.264 or HEVC video for this test.', 422);
-  const duration = Number(probe.format?.duration);
+  // Matroska's segment end includes a nonzero timestamp origin. The TV's
+  // playback position and FFmpeg's default -ss are relative to the first data.
+  const origin = Number(probe.format?.start_time || 0);
+  const duration = Number(probe.format?.duration) -
+    (/matroska|webm/.test(probe.format?.format_name || '') ? origin : 0);
   if (!Number.isFinite(duration) || duration <= 0)
     throw problem('PC audio requires a finite movie or episode.', 422);
   if (source.start >= duration) throw problem('Requested position is past the end.', 422);
@@ -84,11 +88,12 @@ export function createNativeApi({ config, resolveSource, ffmpeg = 'ffmpeg', ffpr
       if (s.plan.convert && s.source.start > 0) {
         // Report the actual video keyframe used for a stream-copy seek. Never
         // pretend an arbitrary requested timestamp can be an exact copied cut.
-        const packets = JSON.parse(await capture(s, ['-v', 'error', '-read_intervals', `${s.source.start}%+#1`,
+        const origin = Number(probe.format?.start_time || 0);
+        const packets = JSON.parse(await capture(s, ['-v', 'error', '-read_intervals', `${s.source.start + origin}%+#1`,
           ...inputArgs(s.source.url, s.source.headers), '-select_streams', 'v:0',
           '-show_packets', '-show_entries', 'packet=pts_time,flags', '-of', 'json']));
         const packet = packets.packets?.[0];
-        const offset = Number(packet?.pts_time) - Number(probe.format?.start_time || 0);
+        const offset = Number(packet?.pts_time) - origin;
         if (!Number.isFinite(offset) || !packet.flags?.includes('K'))
           throw problem('This source cannot provide a safe video-copy seek.', 422);
         s.source.inputStart = s.source.start;

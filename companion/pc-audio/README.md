@@ -32,6 +32,8 @@ Only use this service on a trusted LAN; do not forward its ports to the Internet
 - Continuous MPEG-TS is streamed through bounded pipes, with no whole-film cache.
   Seeking creates a replacement session at a video keyframe and reports its
   actual start. Full duration comes from the original file.
+  Files that cannot provide a safe keyframe seek return an explicit error;
+  unindexed MPEG-TS sources may have this limitation.
 - Pausing relies on HTTP backpressure; long pauses and server disconnect behavior
   still need verification on the LG. Playback errors do not trigger local stereo
   conversion or automatic source switching while the PC session is active.
@@ -41,7 +43,7 @@ Only use this service on a trusted LAN; do not forward its ports to the Internet
 ## Current limitations and validation
 
 Local tests cover DTS core 5.1, DTS-HD MA 5.1, TrueHD 7.1 → AC-3 5.1, English selection, unchanged
-decoded H.264/HEVC frames, keyframe seek offsets, headers, cancellation and access
+decoded H.264/HEVC frames, keyframe seeks including nonzero MKV timestamps, headers, cancellation and access
 control. The native worker's generation/stop/seek tests also ran on the TV CPU.
 Those are not a confirmed media playback test. Real high-bitrate remuxes, HDR/Dolby Vision,
 long pauses, resume and actual TV/soundbar output need on-device verification.
