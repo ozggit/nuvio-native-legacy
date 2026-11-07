@@ -19,7 +19,8 @@ export function planAudio(source, probe) {
   if (source.start >= duration) throw problem('Requested position is past the end.', 422);
   if (convert && !Number.isInteger(audio.channels)) throw problem('The source channel count is unknown.', 422);
   const channels = Math.min(audio.channels, 6);
-  return { video, audio, channels, duration, convert };
+  const audioOrdinal = probe.streams.filter(s => s.codec_type === 'audio').indexOf(audio);
+  return { video, audio, audioOrdinal, channels, duration, convert };
 }
 
 export function tsArgs(source, plan, rate = 1) {
@@ -32,6 +33,7 @@ export function tsArgs(source, plan, rate = 1) {
     '-c:v', 'copy', '-c:a', 'ac3', '-b:a', plan.channels > 2 ? '640k' : '192k',
     '-ac', String(plan.channels), '-ar', '48000', '-sn', '-dn',
     '-metadata:s:a:0', `language=${plan.audio.tags?.language || 'und'}`,
+    '-metadata:s:a:0', 'title=PC AC-3',
     '-max_muxing_queue_size', '2048', '-avoid_negative_ts', 'make_zero',
     '-f', 'mpegts', '-mpegts_flags', '+resend_headers', '-muxdelay', '0', '-muxpreload', '0', 'pipe:1'];
 }
@@ -45,6 +47,7 @@ export function createNativeApi({ config, resolveSource, ffmpeg = 'ffmpeg', ffpr
       audio: s.plan ? `${s.plan.audio.codec_name}${s.plan.convert ? ' → AC-3' : ''}` : '',
       channels: s.plan ? (s.plan.convert ? s.plan.channels : s.plan.audio.channels) : 0,
       language: s.plan?.audio.tags?.language || '', video: s.plan?.video?.codec_name || '',
+      audioOrdinal: s.plan?.audioOrdinal ?? -1,
       bytesSent: s.bytes || 0,
       // A capability URL scoped to one session, never the long-lived pairing token.
       ...(s.state === 'ready' && s.plan.convert ? { path: `/v1/media/${s.id}/${s.capability}/stream.ts` } : {}) };

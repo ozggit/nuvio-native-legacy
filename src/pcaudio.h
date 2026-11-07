@@ -17,6 +17,7 @@ int pcaudio_ativo(void); /* pending, converted, or error: suppress source fallba
 int pcaudio_pendente(void);
 typedef struct {
   int pc; /* 0 = supported source, play original; 1 = copied video + PC audio */
+  int audio; /* ordinal of selected original audio, for direct playback */
   double duration, start;
   char url[4096], error[192];
 } PcAudioResult;

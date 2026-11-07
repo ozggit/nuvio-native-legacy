@@ -2426,7 +2426,10 @@ static int pcPump(void) {
     // No original-source headers or local DTS/DV decoder on the PC's AC-3 URL.
     if (r.pc) cabsHttp[0] = 0;
     int opened = videoTocarLocal(r.url);
-    if (!r.pc) { pcaudio_parar(); pcEligible = 0; pcOffset = pcDuration = 0; }
+    if (!r.pc) {
+      audioAoCarregar = r.audio; posAoCarregar = r.start;
+      pcaudio_parar(); pcEligible = 0; pcOffset = pcDuration = 0;
+    }
     else {
       dtsHabilitado = dvHabilitado = 0; dtsTentou = 1; mkvPendente = 0;
       reconPermitida = 0; nv_recon_zerar(&recon);

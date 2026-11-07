@@ -196,7 +196,7 @@ const playback=http.createServer(async(req,res)=>{
   if(requestKind)res.once('close',()=>log(`${requestKind}: ${req.method} ${res.statusCode} in ${Date.now()-started}ms${res.writableFinished?'':' (client disconnected)'}.`));
   try {
     const u=new URL(req.url,'http://local');
-    if(u.pathname==='/health'){json(res,200,{ok:true,name:'Nuvio PC Audio'});return;}
+    if(u.pathname==='/health'){json(res,200,{ok:true,name:'Nuvio PC Audio',nativeProtocol:1});return;}
     const parts=u.pathname.split('/').filter(Boolean);
     if(parts[0]==='addon'&&equal(parts[1],config.token)) {
       if(!config.upstream)throw fail('Configure AIOStreams on the PC setup page first.',503);
@@ -281,6 +281,7 @@ const admin=http.createServer(async(req,res)=>{
         'Content-Security-Policy':"default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'"});res.end(html);return;
     }
     if(!equal(req.headers['x-setup-token'],adminSecret))throw fail('Reload the setup page.',403);
+    if(u.pathname==='/api/shutdown'&&req.method==='POST') {json(res,200,{ok:true});setImmediate(shutdown);return;}
     if(u.pathname==='/api/status'&&req.method==='GET') {
       json(res,200,{configured:!!config.upstream,baseUrl:config.baseUrl,language:config.language,
         pairing: `${config.baseUrl}#${config.token}`, native: native.status(),

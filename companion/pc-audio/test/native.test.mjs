@@ -55,15 +55,18 @@ test('native sessions: real DTS and TrueHD conversion, copied frames, seeks, hea
     assert.equal((await fetch(base+'/v1/health')).status,401);
     assert.equal((await request('/v1/health','GET',null,{Origin:'https://attacker.example'})).status,403);
     assert.equal((await request('/v1/health')).status,200);
-    for(const [video,audio,layout] of [['libx264','dca','5.1'],['libx265','truehd','7.1']]) {
+    const cases=[['libx264','dca','5.1'],['libx265','truehd','7.1']];
+    if(process.env.NUVIO_DTSHD_FIXTURE)cases.push(['libx264','copy','5.1']);
+    for(const [video,audio,layout] of cases) {
       sourceFile=path.join(directory,`${video}.mkv`);
       const channels=layout==='7.1'?8:6;
       const expression=Array.from({length:channels},(_,i)=>`0.03*sin(2*PI*${110+i*80}*t)`).join('|');
       await run('ffmpeg',['-v','error','-y','-f','lavfi','-i','testsrc2=size=320x180:rate=24:duration=10',
-        '-f','lavfi','-i',`aevalsrc=${expression}:s=48000:d=10:c=${layout}`,
+        ...(audio==='copy'?['-stream_loop','-1','-i',process.env.NUVIO_DTSHD_FIXTURE]:['-f','lavfi','-i',`aevalsrc=${expression}:s=48000:d=10:c=${layout}`]),'-t','10',
         '-map','0:v','-map','1:a','-map','1:a','-c:v',video,'-preset','ultrafast','-g','48',
         ...(video==='libx265'?['-x265-params','log-level=error:pools=2']:[]),'-c:a',audio,'-strict','-2',
         '-metadata:s:a:0','language=spa','-metadata:s:a:1','language=eng','-disposition:a:0','default','-disposition:a:1','0',sourceFile]);
+      if(audio==='copy')assert.equal((await probe(sourceFile)).streams.find(s=>s.codec_type==='audio').profile,'DTS-HD MA');
       const id=await create();const s=await ready(id);assert.equal(s.mode,'pc');assert.equal(s.channels,6);assert.equal(s.language,'eng');
       assert.equal((await fetch(base+s.path,{method:'HEAD'})).status,200);assert.equal(native.status().bytesSent,0);
       assert.equal((await fetch(base+s.path,{headers:{Range:'bytes=200-'}})).status,416);

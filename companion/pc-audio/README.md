@@ -40,10 +40,10 @@ Only use this service on a trusted LAN; do not forward its ports to the Internet
 
 ## Current limitations and validation
 
-Local tests cover DTS core 5.1, TrueHD 7.1 → AC-3 5.1, English selection, unchanged
+Local tests cover DTS core 5.1, DTS-HD MA 5.1, TrueHD 7.1 → AC-3 5.1, English selection, unchanged
 decoded H.264/HEVC frames, keyframe seek offsets, headers, cancellation and access
 control. The native worker's generation/stop/seek tests also ran on the TV CPU.
-Those are not a confirmed media playback test. DTS-HD MA, HDR/Dolby Vision,
+Those are not a confirmed media playback test. Real high-bitrate remuxes, HDR/Dolby Vision,
 long pauses, resume and actual TV/soundbar output need on-device verification.
 
 Embedded subtitles and changing the audio track are not implemented in the PC
@@ -57,6 +57,12 @@ feature does not require them. Do not install that old wrapper as the new soluti
 ## Development and privacy
 
 Run `node --test test/*.test.mjs`. Generated fixtures are temporary and cleaned up.
+The optional DTS-HD MA run sets `NUVIO_DTSHD_FIXTURE` to FFmpeg FATE's
+`dts/dcadec-suite/xll_51_24_48_768.dtshd` (SHA-256
+`c0830af121ec78a8271d008999cc54b99843f17b9b33203bb9adbcbbc3271d0a9`).
+This is a 64 ms decoder fixture looped into a test movie, not a complete real-world
+remux. Obtain it from `https://fate-suite.ffmpeg.org/dts/dcadec-suite/`; it is not
+redistributed in this companion.
 The native control API is `/v1/sessions/<random client ID>` (PUT/GET/DELETE), using
 a bearer token. Playback uses a separate per-session capability URL. Headers and
 source URLs travel in JSON bodies, not query parameters. Browser-origin requests

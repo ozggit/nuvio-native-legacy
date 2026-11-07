@@ -1,3 +1,3 @@
 @echo off
-powershell.exe -NoProfile -File "%~dp0Start.ps1"
+node "%~dp0launcher.mjs" start
 if errorlevel 1 pause

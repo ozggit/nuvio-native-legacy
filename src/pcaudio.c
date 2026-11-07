@@ -125,6 +125,7 @@ static void *worker(void *unused) {
           if (!strcmp(state,"ready")) {
             js_texto_raiz(text,"mode",mode,sizeof mode);
             value.pc = !strcmp(mode,"pc");
+            value.audio = (int)js_num(text,NULL,"audioOrdinal",-1);
             value.duration = js_num(text,NULL,"duration",0);
             value.start = js_num(text,NULL,"start",0);
             if (value.pc) {
