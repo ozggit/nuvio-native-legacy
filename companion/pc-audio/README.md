@@ -32,6 +32,12 @@ can block automatic discovery. The persistent authentication key stays internal.
 
 ## Behavior
 
+The companion page follows Nuvio Legacy's dark theme, jade accent and bundled
+Inter Display typeface. It explains the stream → PC → LG flow, shows the current
+audio/output channels and copied video, and keeps four-digit pairing alongside
+playback status. Network options are tucked into an expandable section. Bundled
+fonts retain their license in `assets/FONT-LICENSE.txt`.
+
 - Normal audio plays directly on the TV, without contacting this server.
 - The enabled fallback starts after the TV identifies DTS/DTS-HD or TrueHD/MLP
   on a movie/episode. Trailers and live TV are not routed through it.

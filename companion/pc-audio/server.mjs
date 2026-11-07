@@ -278,6 +278,11 @@ const admin=http.createServer(async(req,res)=>{
     const u=new URL(req.url,`http://127.0.0.1:${adminPort}`);
     if(!['127.0.0.1','localhost'].includes((req.headers.host||'').split(':')[0]))throw fail('Invalid setup host.',403);
     if(u.pathname==='/favicon.ico'){res.writeHead(204);res.end();return;}
+    const assets={'/assets/icon.png':'image/png','/assets/InterDisplay-Regular.ttf':'font/ttf','/assets/InterDisplay-Bold.ttf':'font/ttf'};
+    if(req.method==='GET'&&assets[u.pathname]) {
+      const asset=await fs.readFile(path.join(root,'assets',path.basename(u.pathname)));
+      res.writeHead(200,{'Content-Type':assets[u.pathname],'Cache-Control':'public, max-age=3600','X-Content-Type-Options':'nosniff'});res.end(asset);return;
+    }
     if(u.pathname==='/'&&req.method==='GET') {
       const html=(await fs.readFile(path.join(root,'native-setup.html'),'utf8')).replace('__ADMIN_TOKEN__',adminSecret);
       res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','X-Frame-Options':'DENY',
