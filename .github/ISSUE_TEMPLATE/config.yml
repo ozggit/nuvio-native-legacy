@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: How to install
-    url: https://github.com/iqui27/nuvio-native-legacy/blob/master/INSTALL.md
-    about: Installation steps for LG, Samsung and VIDAA.
+    url: https://github.com/ozggit/nuvio-native-legacy/blob/pc-audio/docs/pc-audio/INSTALL.md
+    about: LG TV, Windows companion and four-digit pairing for this fork.
   - name: Playback / source problems — check first
-    url: https://github.com/iqui27/nuvio-native-legacy#reporting-a-problem
-    about: Add-on, debrid or connection side? Read the four quick checks before opening a bug.
+    url: https://github.com/ozggit/nuvio-native-legacy/blob/pc-audio/docs/pc-audio/INSTALL.md#troubleshooting
+    about: Check pairing, fallback, companion dependencies and source errors.

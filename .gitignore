@@ -60,6 +60,7 @@ listas-p*.txt
 # README, INSTALL/INSTALAR, AVISOS (formato do canal) e docs/releases.
 /*.md
 !/README.md
+!/UPSTREAM-README.md
 !/INSTALL.md
 !/INSTALAR.md
 !/AVISOS.md

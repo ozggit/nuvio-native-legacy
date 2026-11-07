@@ -1,4 +1,13 @@
-# Nuvio PC Audio — experimental native fallback
+# Nuvio PC Audio — Alpha 1 companion
+
+**LG won't play DTS or TrueHD? PC to the rescue.**
+
+This PC converts unsupported audio to Dolby Digital AC-3, up to 5.1 channels,
+and sends it to your LG with the video copied unchanged. Supported audio plays
+directly on the TV. Keep this PC awake while it handles a stream.
+
+[Full installation guide](https://github.com/ozggit/nuvio-native-legacy/blob/pc-audio/docs/pc-audio/INSTALL.md)
+· [Alpha downloads](https://github.com/ozggit/nuvio-native-legacy/releases/tag/pc-audio-2.0.85-alpha.1)
 
 This companion is for the separate **Nuvio Legacy PC Audio** test app, based on
 Nuvio Legacy 2.0.8. The test IPK uses ID `space.nuvio.native.legacy.pcaudio`, version
@@ -10,20 +19,21 @@ app; the app ID stays the same. The original Nuvio Legacy stays separate.
 ## Windows setup
 
 1. Keep this folder together and run `Start.cmd`. Node 22+ and FFmpeg/FFprobe must
-   be on PATH (already installed on the development PC).
+   be on PATH. This ZIP does not include those dependencies or a standalone EXE;
+   see the installation guide above for downloads. No `npm install` is needed.
 2. Open `http://127.0.0.1:8788`, select the correct Wi-Fi/LAN address if needed,
    and choose **Show pairing code**.
 3. In the test app: Settings → Playback → More options (or enable Advanced).
    Under this TV's sound/video options, choose **Pair PC audio server**. Enter
    the **four digits** shown on the PC and select **Done**. Stay in settings
    until pairing completes, then enable **PC audio fallback (experimental)**.
-4. Browse Kaptain/Bingecat and select ordinary AIOStreams/TorBox sources normally.
+4. Browse your usual add-ons and select movie/episode sources normally.
    No add-on changes or media library are needed.
 5. The PC must be awake for unsupported-audio playback. `Stop.cmd` exits the
    companion; the page's Stop button stops only its current session.
 
-The existing LocalSubnet firewall rule for Node TCP 8787 can be reused. If this
-is a different PC, `Allow-TV.ps1` adds that rule. Setup is loopback-only on 8788.
+If Windows blocks the TV connection, run `Allow-TV.ps1` in an Administrator
+PowerShell to allow Node TCP 8787 from the local subnet. Setup is loopback-only on 8788.
 Only use this service on a trusted LAN; do not forward its ports to the Internet.
 Pairing codes expire after two minutes, work once, and lock after five incorrect
 attempts. The PC advertises discovery on UDP 8789 while a code is open; the TV

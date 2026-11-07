@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest something new or an improvement
+description: Suggest an improvement to the PC Audio edition
 labels: ["enhancement"]
 body:
   - type: textarea
@@ -16,7 +16,6 @@ body:
       multiple: true
       options:
         - LG webOS
-        - Samsung Tizen
-        - Android TV / Google TV
-        - Hisense VIDAA
-        - All
+        - Windows companion
+        - Pairing / setup
+        - Documentation

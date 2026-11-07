@@ -1,7 +1,10 @@
 name: PC Audio test IPK
 on:
   push:
-    branches: [codex/lg-pc-audio-5-1]
+    branches: [pc-audio, codex/lg-pc-audio-5-1]
+    paths-ignore:
+      - "**/*.md"
+      - ".github/ISSUE_TEMPLATE/**"
   workflow_dispatch:
 permissions:
   contents: read
