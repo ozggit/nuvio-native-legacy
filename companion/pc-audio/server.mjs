@@ -9,6 +9,7 @@ import { spawn } from 'node:child_process';
 import { pipeline } from 'node:stream/promises';
 import { equal, validateRemote, cleanHeaders, resourceUrl, ffmpegArgs, inputArgs } from './lib.mjs';
 import { createNativeApi } from './native.mjs';
+import { createPairing } from './pairing.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const data = path.resolve(process.env.NUVIO_DATA || path.join(root, 'data'));
@@ -188,7 +189,9 @@ const native = createNativeApi({ config: () => config, ffmpeg, ffprobe,
     await r.response.body?.cancel();
     return { url: r.url, headers: r.headers };
   } });
+const pairing = createPairing({ config: () => config });
 const playback=http.createServer(async(req,res)=>{
+  if(await pairing.handle(req,res))return;
   if(await native.handle(req,res))return;
   if(cors(req,res))return;
   const started=Date.now();
@@ -284,17 +287,19 @@ const admin=http.createServer(async(req,res)=>{
     if(u.pathname==='/api/shutdown'&&req.method==='POST') {json(res,200,{ok:true});setImmediate(shutdown);return;}
     if(u.pathname==='/api/status'&&req.method==='GET') {
       json(res,200,{configured:!!config.upstream,baseUrl:config.baseUrl,language:config.language,
-        pairing: `${config.baseUrl}#${config.token}`, native: native.status(),
+        pairing: pairing.status(), native: native.status(),
         addonUrl:`${config.baseUrl}/addon/${config.token}/manifest.json`,lastError,
         addresses:Object.values(os.networkInterfaces()).flat().filter(x=>x.family==='IPv4'&&!x.internal).map(x=>`http://${x.address}:${port}`),
         sessions:[...sessions.values()].map(s=>({id:s.id,title:s.title,loading:s.loading,running:s.running,delivering:!!s.delivering,audio:s.audio,video:s.video,language:s.language,channels:s.channels,duration:s.duration,cacheGB:(s.bytes/1e9).toFixed(2),error:s.error})),
         maxCacheGB:config.maxCacheGB});return;
     }
+    if(u.pathname==='/api/pair/start'&&req.method==='POST') {json(res,200,await pairing.begin());return;}
+    if(u.pathname==='/api/pair/cancel'&&req.method==='POST') {pairing.cancel();json(res,200,{ok:true});return;}
     if(u.pathname==='/api/native-config'&&req.method==='POST') {
       const b=await body(req);const base=new URL(b.baseUrl);
       const ips=Object.values(os.networkInterfaces()).flat().filter(x=>x.family==='IPv4'&&!x.internal).map(x=>x.address);
       if(base.protocol!=='http:'||!ips.includes(base.hostname)||Number(base.port)!==port||base.pathname!=='/'||base.search||base.hash||base.username||base.password)throw fail('Choose this PC’s local address.');
-      config={...config,baseUrl:base.origin};await saveConfig();json(res,200,{ok:true});return;
+      pairing.cancel();config={...config,baseUrl:base.origin};await saveConfig();json(res,200,{ok:true});return;
     }
     if(u.pathname==='/api/config'&&req.method==='POST') {
       const b=await body(req);let upstream=String(b.upstream||'').trim().replace(/^stremio:\/\//,'https://');
@@ -337,7 +342,7 @@ admin.listen(adminPort,'127.0.0.1',()=>log(`Setup: http://127.0.0.1:${adminPort}
 for(const s of [playback,admin])s.on('error',e=>{log(`Cannot open server port (${e.code}).`);shutdown();});
 async function shutdown() {
   if(closing)return;closing=true;clearInterval(reaper);playback.close();admin.close();
-  native.close();
+  native.close();pairing.close();
   await Promise.all([...sessions.keys()].map(stopSession));process.exit(0);
 }
 process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);

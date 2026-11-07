@@ -2,16 +2,20 @@
 
 This companion is for the separate **Nuvio Legacy PC Audio** test app, based on
 Nuvio Legacy 2.0.8. The test IPK uses ID `space.nuvio.native.legacy.pcaudio`, version
-`2.0.81`, and a green/cyan PC-badged icon. It does not replace the original app.
+`2.0.82`, and a green/cyan PC-badged icon. It does not replace the original app.
+Install this IPK manually in webOS Dev Manager over the earlier PC Audio test
+app; the app ID stays the same. The original Nuvio Legacy stays separate.
 
 ## Windows setup
 
 1. Keep this folder together and run `Start.cmd`. Node 22+ and FFmpeg/FFprobe must
    be on PATH (already installed on the development PC).
-2. Open the pairing section on the local page at `http://127.0.0.1:8788`.
+2. Open `http://127.0.0.1:8788`, select the correct Wi-Fi/LAN address if needed,
+   and choose **Show pairing code**.
 3. In the test app: Settings → Playback → More options (or enable Advanced).
-   Under this TV's sound/video options, choose **Pair PC audio server**. Paste
-   the private pairing link, then enable **PC audio fallback (experimental)**.
+   Under this TV's sound/video options, choose **Pair PC audio server**. Enter
+   the **four digits** shown on the PC and select **Done**. Stay in settings
+   until pairing completes, then enable **PC audio fallback (experimental)**.
 4. Browse Kaptain/Bingecat and select ordinary AIOStreams/TorBox sources normally.
    No add-on changes or media library are needed.
 5. The PC must be awake for unsupported-audio playback. `Stop.cmd` exits the
@@ -20,6 +24,11 @@ Nuvio Legacy 2.0.8. The test IPK uses ID `space.nuvio.native.legacy.pcaudio`, ve
 The existing LocalSubnet firewall rule for Node TCP 8787 can be reused. If this
 is a different PC, `Allow-TV.ps1` adds that rule. Setup is loopback-only on 8788.
 Only use this service on a trusted LAN; do not forward its ports to the Internet.
+Pairing codes expire after two minutes, work once, and lock after five incorrect
+attempts. The PC advertises discovery on UDP 8789 while a code is open; the TV
+exchanges the code over existing TCP 8787. No IP address or long key is typed
+on the TV. Keep both devices on the same local network; guest/client isolation
+can block automatic discovery. The persistent authentication key stays internal.
 
 ## Behavior
 

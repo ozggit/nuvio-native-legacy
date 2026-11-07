@@ -7,9 +7,9 @@
 <p>Browse and choose sources normally on your TV. Supported audio plays directly. For DTS or TrueHD, this PC copies the video and converts the English audio to Dolby Digital, keeping up to 5.1 channels.</p>
 <div class="card"><h2>Current playback</h2><div id="state">Connecting…</div><p id="details"></p><p id="error" class="error"></p><button id="stop" hidden>Stop</button>
 <p><small>Bytes sent means the TV requested data. Confirm picture and Dolby Digital 5.1 on the TV and soundbar.</small></p></div>
-<details class="card"><summary>Pair your TV</summary><p>In the separate <strong>Nuvio Legacy PC Audio</strong> app, open Playback settings, choose <strong>Pair PC audio server</strong>, then enable <strong>PC audio fallback</strong>.</p>
+<details class="card" open><summary>Pair your TV</summary><p>Select <strong>Show pairing code</strong>. On the TV, open <strong>Settings → Playback → More options → Pair PC audio server</strong>, enter the four digits and select <strong>Done</strong>. The TV finds this PC automatically. Then enable <strong>PC audio fallback</strong>.</p>
 <label for="address">This PC’s local network address</label><select id="address"></select><button id="save">Use address</button>
-<label for="pairing">Private pairing link</label><input id="pairing" readonly type="password"><button id="copy">Copy pairing link</button><button id="show">Show / hide</button>
+<div id="pair-code" aria-live="polite" style="font-size:56px;font-weight:750;letter-spacing:12px;font-variant-numeric:tabular-nums"></div><p id="pair-status">No code active.</p><button id="pair-start">Show pairing code</button><button id="pair-cancel" hidden>Cancel pairing</button><p><small>Use PC Audio app 2.0.82 or newer. Codes expire after two minutes and work once. No address or long key to type.</small></p>
 <p><small>Keep this PC awake on the TV’s network. No AIOStreams changes are needed. Pairing stays on this TV. Embedded subtitles and alternate audio selection are not yet supported by the PC path; external subtitles need TV verification.</small></p></details>
 <script>
 const key='__ADMIN_TOKEN__';let session=null,initialized=false;
@@ -17,13 +17,16 @@ async function api(url,body){const r=await fetch(url,{method:body===undefined?'G
 const el=id=>document.getElementById(id);
 async function refresh(){try{const s=await api('/api/status');session=s.native;
  if(!initialized){for(const value of s.addresses){const o=document.createElement('option');o.value=o.textContent=value;el('address').append(o);}el('address').value=s.baseUrl;initialized=true;}
- el('pairing').value=s.pairing;el('error').textContent=session?.error||'';
+ const p=s.pairing;el('pair-code').textContent=p.code||'';
+ el('pair-status').textContent=p.state==='waiting'?`Enter these four digits on the TV. Expires in ${Math.max(0,Math.ceil((p.expiresAt-Date.now())/1000))} seconds.`:p.state==='paired'?'PC pairing accepted. Enable PC audio fallback on the TV.':p.state==='expired'?'Code expired. Show a new code.':p.state==='locked'?'Too many attempts. Show a new code.':p.state==='error'?'Discovery stopped. Check the selected network address and retry.':'No code active.';
+ el('pair-cancel').hidden=p.state!=='waiting';el('pair-start').textContent=p.state==='waiting'?'New code':'Show pairing code';
+ el('error').textContent=session?.error||'';
  el('state').textContent=!session?'Ready for your TV':session.state==='error'?'Playback needs attention':session.state==='preparing'?'Preparing audio…':session.bytesSent>0?'Sending media data':session.mode==='direct'?'Audio supported — TV plays directly':'Ready for TV playback';
  el('details').textContent=session?.audio?`${session.audio} · ${session.channels===6?'5.1':session.channels+' channels'} · ${session.language} · video copied`: 'No active conversion.';
  el('stop').hidden=!session;
 }catch(e){el('error').textContent=e.message;}}
-el('copy').onclick=()=>navigator.clipboard.writeText(el('pairing').value);
-el('show').onclick=()=>{el('pairing').type=el('pairing').type==='password'?'text':'password';};
+el('pair-start').onclick=async()=>{try{await api('/api/pair/start',{});await refresh();}catch(e){el('error').textContent=e.message;}};
+el('pair-cancel').onclick=async()=>{try{await api('/api/pair/cancel',{});await refresh();}catch(e){el('error').textContent=e.message;}};
 el('stop').onclick=async()=>{try{await api('/api/stop',{id:session?.id});await refresh();}catch(e){el('error').textContent=e.message;}};
 el('save').onclick=async()=>{try{await api('/api/native-config',{baseUrl:el('address').value});await refresh();}catch(e){el('error').textContent=e.message;}};
 refresh();setInterval(refresh,2000);

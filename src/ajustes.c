@@ -80,6 +80,7 @@
 #include "artehero.h"
 #include "jellyfin.h"
 #include "pcaudio.h"
+#include "pcpair.h"
 #include "plex.h"
 #include "artereserva.h"
 #include "corviva.h"
@@ -6887,7 +6888,7 @@ static const char *textoLeitura(int op) {
   if (op == AJ_P2P_URL) return p2pEndereco[0] ? p2pEndereco
                              : p2pmotor_disponivel() ? i18n("Nesta TV") : i18n("Não configurado");
   if (op >= AJ_JF_SERVIDOR && op <= AJ_JF_SAIR) return jfTexto(op);
-  if (op == AJ_PC_PAREAR) return pcaudio_configurado() ? pcaudio_servidor() : "Not paired";
+  if (op == AJ_PC_PAREAR) return pcpair_pendente() ? "Finding your PC..." : pcaudio_configurado() ? pcaudio_servidor() : "Not paired";
   if (op >= AJ_EM_SERVIDOR && op <= AJ_EM_SAIR) return emTexto(op);
   if (op >= AJ_PX_ENTRAR && op <= AJ_PX_SAIR) return pxTexto(op);
   if (op == AJ_P2P_URL) return p2pEndereco[0] ? p2pEndereco : i18n("Não configurado");
@@ -7800,6 +7801,8 @@ static const char *ajudaOpcaoBase(int op) {
     case AJ_NT_METAUSER: case AJ_NT_TRAKT: case AJ_NT_TMDB: case AJ_NT_LETTER:
     case AJ_NT_MAL: case AJ_NT_EBERT: case AJ_NT_SCORE:
       return "Mostra esta nota na linha do título, com a marca e a escala do próprio site. Se a linha não couber, saem primeiro as menos importantes. A aba de notas continua mostrando todas.";
+    case AJ_PC_AUDIO: return "Use the paired PC for unsupported DTS or TrueHD movie audio. Supported audio plays directly on the TV. Keep the PC companion running when using this fallback.";
+    case AJ_PC_PAREAR: return "On the PC companion page, select Show pairing code. Press OK here and enter its four digits. The TV finds the PC automatically on the same local network.";
     default: return "Use as setas laterais para escolher. A preferência é aplicada ao alterar o valor.";
   }
 }
@@ -7973,6 +7976,8 @@ static const char *beneficioProprio(int op) {
     case AJ_CW_ORDEM: return "Em que ordem a retomada mostra os títulos.";
     case AJ_FONTE_REGEX: return "Sobe ou exige fontes cujo nome casa com um padrão.";
     case AJ_DTS_AC3: return "Para TVs que não tocam DTS: o som é convertido na hora.";
+    case AJ_PC_AUDIO: return "PC audio conversion only when a movie needs it.";
+    case AJ_PC_PAREAR: return "Press OK to enter the four-digit code shown on your PC.";
     case AJ_CACHE_SEEK: return "Guarda o que já baixou para voltar no filme sem esperar.";
     case AJ_MIC_BUSCA: return "Busque falando, pelo microfone do controle.";
 #ifdef NV_ANDROID
@@ -9593,10 +9598,10 @@ static void eventoTela(const SDL_Event *e) {
       return;
     }
     if (focoOp == AJ_PC_PAREAR) {
+      pcpair_cancelar();
       stCampo = focoOp;
-      teclado_abrir_com("Pair PC audio", "Paste the pairing link from the PC page. Empty clears pairing.",
-                        190, "abcdefghijklmnopqrstuvwxyz0123456789.:/#", NULL);
-      teclado_tipo(TECLADO_TIPO_SENHA); teclado_mascarar(1);
+      teclado_abrir_com("Pair PC audio", "Enter the four-digit code shown on the PC, then select Done.",
+                        4, "0123456789", NULL);
       return;
     }
     if (focoOp >= AJ_JF_SERVIDOR && focoOp <= AJ_JF_SAIR) { jfAtivar(focoOp); return; }
@@ -9661,6 +9666,13 @@ static void eventoTela(const SDL_Event *e) {
 
 static void aj2Atualizar(float dt);
 void ajustes_atualizar(float dt, Uint32 agora) {
+  { char pairing[192], error[192];
+    if (pcpair_receber(pairing,sizeof pairing,error,sizeof error)) {
+      if (error[0]) uxNotificar(error);
+      else uxNotificar(pcaudio_configurar(pairing) ? "PC paired. Enable PC audio fallback to use it." : "Could not save pairing on this TV. Try again.");
+      memset(pairing,0,sizeof pairing);
+    }
+  }
   if(iptvForm.tipo && !nv_perfil_sessao_atual(iptvForm.sessao)) { ajIptvLimparForm();uxCancelar();stCampo=0;teclado_esquecer(); }
   ajLegendaEspelhar(); ajIptvEspelhar();
   AJ_ESCALA_INI();
@@ -9722,8 +9734,8 @@ void ajustes_atualizar(float dt, Uint32 agora) {
         uxNotificar(e < 0 ? "Regex inválida: ignorada" : "Ajuste salvo nesta TV.");
       }
       else if (stCampo == AJ_PC_PAREAR) {
-        int ok = pcaudio_configurar(teclado_texto()); teclado_esquecer();
-        uxNotificar(ok ? "PC pairing saved on this TV." : "Invalid pairing link or settings could not be saved.");
+        int ok = pcpair_iniciar(teclado_texto()); teclado_esquecer();
+        uxNotificar(ok ? "Finding your PC... Keep its pairing code open." : "Enter exactly four digits from the PC.");
       }
       else if (stCampo == AJ_JF_SERVIDOR)     jellyfin_definir_servidor(teclado_texto());
       else if (stCampo == AJ_EM_SERVIDOR)     emby_definir_servidor(teclado_texto());
