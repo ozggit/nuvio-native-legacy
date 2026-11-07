@@ -2,7 +2,7 @@
 
 This companion is for the separate **Nuvio Legacy PC Audio** test app, based on
 Nuvio Legacy 2.0.8. The test IPK uses ID `space.nuvio.native.legacy.pcaudio`, version
-`2.0.83`, and a green/cyan PC-badged icon. It does not replace the original app.
+`2.0.84`, and a green/cyan PC-badged icon. It does not replace the original app.
 Install this IPK manually in webOS Dev Manager over the earlier PC Audio test
 app; the app ID stays the same. The original Nuvio Legacy stays separate.
 
@@ -48,6 +48,10 @@ fonts retain their license in `assets/FONT-LICENSE.txt`.
 - PC fallback takes priority over the TV's local DTS converter for that playback.
   Turning PC fallback off restores the normal local conversion behavior. The
   app does not run both converters or silently switch to local stereo on failure.
+- During PC preparation/loading the TV displays a persistent **PC audio fallback**
+  banner and **Back - cancel and choose another stream**. Back stops the session
+  and opens the source list. The banner clears when loading finishes and is
+  independent of the cinema/compact/expanded loading preference.
 - The PC selects English main audio, copies H.264/HEVC video, and converts
   unsupported audio to AC-3. 7.1 becomes 5.1; stereo and mono are not upmixed.
 - If the selected English audio is already supported, the server reports direct
@@ -68,8 +72,10 @@ fonts retain their license in `assets/FONT-LICENSE.txt`.
 Local tests cover DTS core 5.1, DTS-HD MA 5.1, TrueHD 7.1 → AC-3 5.1, English selection, unchanged
 decoded H.264/HEVC frames, keyframe seeks including nonzero MKV timestamps, headers, cancellation and access
 control. The native worker's generation/stop/seek tests also ran on the TV CPU.
-Those are not a confirmed media playback test. Real high-bitrate remuxes, HDR/Dolby Vision,
-long pauses, resume and actual TV/soundbar output need on-device verification.
+The user confirmed actual playback with 2.0.83: Nuvio reports AC-3 5.1 and Sonos
+reports Dolby Digital 5.1. This confirms that tested stream, not every source.
+Real high-bitrate remuxes, HDR/Dolby Vision, long pauses and resume still need
+on-device verification. The 2.0.84 banner and Back flow need a manual TV check.
 
 Embedded subtitles and changing the audio track are not implemented in the PC
 transport. External subtitle timing after a PC seek is unverified. AC-3 does not

@@ -4050,7 +4050,23 @@ static int ativarBotao(int i, int repetiu) {
   return 1;
 }
 
+/* Shared by drawing and Back: this is the active handoff, never just a saved
+ * setting. It also covers the PC stream's initial/rebuffering TV load. */
+static int pcAudioCarregando(void) {
+  return aberto && !ehCanal() && !erroFonte && !saindo && pcaudio_ativo() &&
+         (pcaudio_pendente() || player_carregando() || video_bufferando_ms() >= 600);
+}
+
 void player_evento(const SDL_Event *e) {
+  if (e->type == SDL_KEYDOWN && pcAudioCarregando() &&
+      (e->key.keysym.sym == SDLK_ESCAPE || e->key.keysym.sym == SDLK_AC_BACK ||
+       e->key.keysym.sym == SDLK_BACKSPACE || e->key.keysym.sym == SDLK_DELETE)) {
+    /* Stop now, before opening the source sheet. video_parar invalidates the
+     * worker generation and asynchronously deletes the PC session, so a late
+     * preparation reply cannot replace the next source the user chooses. */
+    player_voltar_a_esperar(); pedFontes = 1;
+    return;
+  }
   if (e->type == SDL_KEYUP && (e->key.keysym.sym == SDLK_RETURN ||
       e->key.keysym.sym == SDLK_KP_ENTER || e->key.keysym.sym == SDLK_SPACE))
     confirmacaoTransporteRetida = 0;
@@ -6143,6 +6159,28 @@ static void capaReabertura(GfxRect furo, const CatItem *c, Uint32 agora) {
   gfx_cor(furo, 0.0f, 0.0f, 0.0f, 0.0f, 0.45f * a);
 }
 #endif
+
+/* Separate from cinema/compact/expanded loading layouts: never hidden behind
+ * a preference or replaced by a generic "opening source" message. */
+void player_pc_audio_desenhar(void) {
+  if (!pcAudioCarregando() || stream_folha_aberta() || stream_folha_anim() >= 0.05f) return;
+  float w = fminf(960.0f, NV_TELA_W - 96.0f), x = (NV_TELA_W - w) * 0.5f;
+  float r, g, b;
+  GfxRect box = { x, 78.0f, w, 154.0f };
+  corFocoPlayer(&r, &g, &b);
+  gfx_cor(box, 0.13f, 0.055f, 0.06f, 0.065f, 0.97f);
+  gfx_cor((GfxRect){x + 24.0f, 102.0f, 4.0f, 104.0f}, 0.5f, r, g, b, 1.0f);
+  TxtLinha title = txt_linha_corta(TXT_G26B, "PC audio fallback", 243, 242, 239, 255, w - 92.0f);
+  TxtLinha stage = txt_linha_corta(TXT_ILHA_SUB,
+    pcaudio_pendente() ? "Checking and preparing audio on your PC..."
+                      : "Loading compatible audio from your PC...",
+    205, 211, 208, 255, w - 92.0f);
+  TxtLinha hint = txt_linha_corta(TXT_G19M, "Back - cancel and choose another stream",
+                                 174, 188, 181, 255, w - 92.0f);
+  txt_desenhar_alpha(title, x + 48.0f, 98.0f, 1.0f);
+  txt_desenhar_alpha(stage, x + 48.0f, 143.0f, 1.0f);
+  txt_desenhar_alpha(hint, x + 48.0f, 183.0f, 1.0f);
+}
 
 void player_desenhar(Uint32 agora) {
   if (!aberto) return;

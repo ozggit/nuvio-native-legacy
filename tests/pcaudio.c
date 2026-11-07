@@ -61,8 +61,17 @@ int main(void) {
   assert(pcaudio_ativo()&&!pcaudio_pendente());
   assert(pcaudio_buscar(40));r=waitResult();assert(r.pc);
   pcaudio_parar();assert(!pcaudio_ativo());assert(!pcaudio_receber(&r));
-  assert(pcaudio_iniciar("https://example.com/slow","Authorization: Bearer test\r\n",0));usleep(50000);pcaudio_parar();usleep(400000);
+  assert(pcaudio_iniciar("https://example.com/slow","Authorization: Bearer test\r\n",0));
+  usleep(50000); assert(pcaudio_pendente()); pcaudio_parar();
+  assert(!pcaudio_ativo() && !pcaudio_pendente());
+  usleep(400000);
   assert(!pcaudio_receber(&r));
+  pthread_mutex_lock(&mockLock); assert(!currentId[0]); pthread_mutex_unlock(&mockLock);
+  /* Back from PC loading then choose a different source: no stale result. */
+  assert(pcaudio_iniciar("https://example.com/after-back","Authorization: Bearer test\r\n",0));
+  r = waitResult(); assert(r.pc && !r.error[0]);
+  pthread_mutex_lock(&mockLock); assert(strstr(currentSource,"after-back")); pthread_mutex_unlock(&mockLock);
+  pcaudio_parar();
   pcaudio_falhar("explicit error");assert(pcaudio_ativo());r=waitResult();assert(!strcmp(r.error,"explicit error"));
   assert(pcaudio_configurar(""));assert(!pcaudio_configurado());
   puts("PASS: pairing, escaped headers, stale reply rejection, seek, stop, explicit error");

@@ -60,9 +60,9 @@ shutil.copytree(source/'deploy'/'app',target/'deploy'/'app',ignore=ignore)
 metadata=target/'deploy'/'app'/'appinfo.json'
 app=json.loads(metadata.read_text())
 app['id']='space.nuvio.native.legacy.pcaudio';app['title']='Nuvio Legacy PC Audio'
-app['version']='2.0.83';app['icon']='icon-pcaudio.png';app['largeIcon']='icon-large-pcaudio.png'
+app['version']='2.0.84';app['icon']='icon-pcaudio.png';app['largeIcon']='icon-large-pcaudio.png'
 tizen=target/'tools'/'tizen-config.xml'
-tizen.write_text(tizen.read_text().replace('2.0.8','2.0.83'))
+tizen.write_text(tizen.read_text().replace('2.0.8','2.0.84'))
 metadata.write_text(json.dumps(app,ensure_ascii=False,indent=2)+'\n')
 # arm.sh uses both direct compiler arguments and a response file. Put the
 # string-valued identity in the private header to avoid double quote parsing.

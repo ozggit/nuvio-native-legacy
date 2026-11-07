@@ -7098,6 +7098,7 @@ static void desenharTelas(Uint32 agora) {
   // inclusive: ela cobre a troca do HDR10 pelo caminho do DV e esvai sobre o
   // filme. Sem o brilho do OSD (e tela, nao controle).
   if (player_aberto()) dvtela_desenhar(agora);
+  if (player_aberto()) player_pc_audio_desenhar();
   gfx_hdr_ui = 1.0f;
 }
 

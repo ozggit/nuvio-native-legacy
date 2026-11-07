@@ -206,6 +206,8 @@ void player_marcar_canal(const CatItem *item);
 void player_evento(const SDL_Event *e);
 void player_atualizar(float dt, Uint32 agora);
 void player_desenhar(Uint32 agora);
+/* PC handoff banner, above all loading layouts; source chooser hides it. */
+void player_pc_audio_desenhar(void);
 int  player_quer_sair(void);  // 1 assim que o Back foi apertado
 void player_encerrar(void);
 // VOD na ilha: pausa antecipada durante a saida, conserva somente com ack,
