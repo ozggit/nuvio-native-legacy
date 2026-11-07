@@ -287,7 +287,7 @@ cp nuvio-proto.arm deploy/app/nuvio-proto
 # quem instalasse tocaria torrent na assinatura do dono. fanart.txt (chave
 # pessoal) e p2p.txt (IP da rede do dono) tinham a mesma sina e tambem nao
 # estavam na lista.
-ARQ_DE_PESSOA="trakt.txt addons.txt tmdb.txt mdblist.txt ajustes.txt
+ARQ_DE_PESSOA="pcaudio-local.txt trakt.txt addons.txt tmdb.txt mdblist.txt ajustes.txt
                progresso.txt nuvem.txt sessao.txt perfil.txt cliente.txt
                listas.txt guia-fav.txt debrid.txt fanart.txt p2p.txt seekr.txt seekr.txt.tmp"
 

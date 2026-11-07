@@ -1,4 +1,5 @@
 #include "app_id.h"
+#include "pcaudio.h"
 #include "video.h"
 #include "webosver.h"
 #include "audioinfo.h"
@@ -2310,6 +2311,7 @@ static int recarregarMesmaFonte(double alvo, int aud, int leg, const char *legUr
 
 void video_definir_reconexao(int sim) { reconProxima = sim ? 1 : 0; }
 int video_recarregar(void) {
+  if (pcaudio_ativo()) return 0;
   double alvo = posNativa;
   int pausado = pausaPedida;
   if (!ligado || !midia[0] || !pronto || !urlAtual[0] || falhou || terminou ||
@@ -2331,7 +2333,17 @@ int  video_reconectando(void) {
   return nv_recon_ativa(&recon) && (recon.pendente || !pronto) ? recon.tentativa : 0;
 }
 
+static int pcEligible, pcConverted, pcPaused;
+static double pcOffset, pcDuration, pcSeek;
+static Uint32 pcSeekAt, pcLoadAt;
+static int videoTocarLocal(const char *url);
 int video_tocar(const char *url) {
+  pcaudio_parar();
+  pcEligible = pcaudio_consumir(); pcConverted = pcPaused = 0;
+  pcOffset = pcDuration = 0; pcSeekAt = pcLoadAt = 0;
+  return videoTocarLocal(url);
+}
+static int videoTocarLocal(const char *url) {
   dvRecuado = 0;
   dtsTentou = 0; dtsRevisao = 0; dtsSaida[0] = 0; dtsNativePending = 0; dtsEstado = 0;
   dtsHabilitado = dts_playback_enabled() && dtsLiberadoNestaTv();
@@ -2377,18 +2389,74 @@ static void mkvRetryBombear(void) {
   mkvPendente = 1;
   video_sondar_mkv_agora();
 }
+static int pcUnsupported(const VideoFaixa *track) {
+  if (video_faixa_dts(track)) return 1;
+  if (!track) return 0;
+  char codec[128]; snprintf(codec,sizeof codec,"%s %s",track->codec,track->rotulo);
+  for (char *p=codec;*p;p++) *p=(char)tolower((unsigned char)*p);
+  return strstr(codec,"truehd") || strstr(codec,"true hd") || strstr(codec,"mlp");
+}
+static int pcPump(void) {
+  PcAudioResult r;
+  if (pcEligible && !pcaudio_ativo() && !dtsTentou && !dtsSessao &&
+      pcUnsupported(video_audio(audioAtual))) {
+    double start = (seekEm || seekEnvEm) ? seekAlvo : posSeg;
+    pcDuration = durSeg; pcPaused = pausaPedida;
+    // Capture source and headers before unloading the TV's rejected audio.
+    int started = pcaudio_iniciar(urlAtual,cabsHttp,start);
+    pararSessao(); posSeg = 0; pcOffset = start; pcLoadAt = SDL_GetTicks();
+    dtsTentou = 1; dtsHabilitado = dvHabilitado = 0;
+    if (!started) pcaudio_falhar("PC audio is not paired or could not start. Check Playback settings.");
+  }
+  if (!pcaudio_ativo()) return 0;
+  if (pcSeekAt && (int)(SDL_GetTicks()-pcSeekAt) >= 0) {
+    pcSeekAt = 0; pararSessao(); posSeg = 0; pcOffset = pcSeek;
+    pcLoadAt = SDL_GetTicks();
+    if (!pcaudio_buscar(pcSeek)) pcaudio_falhar("PC audio seek could not start.");
+  }
+  if (pcaudio_receber(&r)) {
+    if (r.error[0]) {
+      pararSessao(); falhou = 1;
+      snprintf(erroTexto,sizeof erroTexto,"%s",r.error); return 1;
+    }
+    pcOffset = r.start; pcDuration = r.duration; pcConverted = r.pc;
+    // No original-source headers or local DTS/DV decoder on the PC's AC-3 URL.
+    if (r.pc) cabsHttp[0] = 0;
+    int opened = videoTocarLocal(r.url);
+    if (!r.pc) { pcaudio_parar(); pcEligible = 0; pcOffset = pcDuration = 0; }
+    else {
+      dtsHabilitado = dvHabilitado = 0; dtsTentou = 1; mkvPendente = 0;
+      reconPermitida = 0; nv_recon_zerar(&recon);
+      snprintf(dtsSaida,sizeof dtsSaida,"PC → AC-3");
+    }
+    pcLoadAt = SDL_GetTicks();
+    if (pcPaused) recarregarPausa = 1;
+    if (!opened) { falhou = 1; snprintf(erroTexto,sizeof erroTexto,"TV could not open the PC audio stream."); }
+  }
+  if (pcaudio_pendente()) return 1;
+  if (pcConverted && terminou && pcDuration > 0 && pcOffset + posSeg < pcDuration - 3) {
+    terminou = 0; falhou = 1;
+    snprintf(erroTexto,sizeof erroTexto,"PC audio stream ended before the film finished.");
+  }
+  if (pcConverted && !pronto && pcLoadAt && SDL_GetTicks()-pcLoadAt > 45000) {
+    pararSessao(); falhou = 1; snprintf(erroTexto,sizeof erroTexto,"TV did not open the PC audio stream in time.");
+  }
+  return falhou;
+}
 void video_bombear(void) {
+  if (pcPump()) return;
   ack_publicar();
   velBombear();
   mkvRetryBombear();
   acbBindRecolher();
   if (ligado) acbConfigurarTipo(dtsSessao != NULL);
   if (dtsSessao) bombearDts();
-  else if (dvHabilitado && !dtsNativePending && !dtsTentou && !modoLoad && urlAtual[0] && !dvSegurar && dvPronto()) {
+  else if ((!pcEligible || (video_audio(audioAtual) && !pcUnsupported(video_audio(audioAtual)))) &&
+           dvHabilitado && !dtsNativePending && !dtsTentou && !modoLoad && urlAtual[0] && !dvSegurar && dvPronto()) {
     dtsModoDv = 1;
     iniciarDts(-1);
   }
-  else if (dtsHabilitado && !dtsNativePending && !dtsTentou && !modoLoad && urlAtual[0]) {
+  else if (!pcEligible && dtsHabilitado && !dtsNativePending && !dtsTentou && !modoLoad && urlAtual[0]) {
     // SO COM FAIXA DTS CONHECIDA (teste na C9, 06/10): o erro 200 tambem vem
     // de TrueHD e de faixa ainda sem codec; o fallback derrubava a reproducao
     // nativa, que na 2.0.0 seguia. Sem a lista de faixas, espera ela chegar.
@@ -2810,6 +2878,8 @@ static int tocarInterno(const char *url, int comDV) {
 // Sair do video (ou trocar de fonte) cancela a queda em curso: sem isto o
 // video_bombear recarregaria a fonte velha depois de a tela ja ter fechado.
 void video_parar(void) {
+  pcaudio_parar(); pcEligible = pcConverted = pcPaused = 0;
+  pcOffset = pcDuration = 0; pcSeekAt = pcLoadAt = 0;
   nv_recon_zerar(&recon);
   reconErroPend = 0;
   pararSessao();
@@ -3247,6 +3317,7 @@ static void bombearDts(void) {
 }
 
 void video_pausar(int pausado) {
+  if (pcaudio_ativo()) pcPaused = !!pausado;
   char b[128];
   if (dtsSessao) {
     pausaConfirmada = 0; pausaPedida = !!pausado;
@@ -3291,6 +3362,13 @@ void video_volume(int pct) {
 #define SEEK_REPOUSO_MS 350
 
 void video_buscar(double segundos) {
+  if (pcaudio_ativo()) {
+    if (!isfinite(segundos)) return;
+    pcSeek = segundos < 0 ? 0 : segundos;
+    if (pcDuration > 0 && pcSeek >= pcDuration) pcSeek = fmax(0,pcDuration-1);
+    pcSeekAt = SDL_GetTicks() + SEEK_REPOUSO_MS;
+    return;
+  }
   if (dtsSessao) {
     if (segundos < 0) segundos = 0;
     if (dvSilencio) dvEntradaSeg = segundos;
@@ -3512,9 +3590,9 @@ void video_janela_fonte(int sx, int sy, int sw, int sh,
   (void)b; (void)aoJanela;
 }
 
-double video_pos(void)      { return posSeg; }
-double video_duracao(void)  { return durSeg; }
-double video_buffer_fim(void) { return bufferSeg; }
+double video_pos(void)      { return pcaudio_ativo() ? (pcSeekAt ? pcSeek : pcOffset + posSeg) : posSeg; }
+double video_duracao(void)  { return pcaudio_ativo() && pcDuration > 0 ? pcDuration : durSeg; }
+double video_buffer_fim(void) { return pcaudio_ativo() ? pcOffset + bufferSeg : bufferSeg; }
 // webOS: so o buffer em SEGUNDOS e real (bufferRange do uMS); bytes, conexoes
 // e quadros o uMS nao conta. O host e o do link pedido (o uMS nao diz o final).
 void video_estatisticas(VideoStats *s) {

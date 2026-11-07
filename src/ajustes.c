@@ -79,6 +79,7 @@
 #include "js.h"
 #include "artehero.h"
 #include "jellyfin.h"
+#include "pcaudio.h"
 #include "plex.h"
 #include "artereserva.h"
 #include "corviva.h"
@@ -704,6 +705,7 @@ typedef enum {
   // fileiraFormato): o estilo. LOCAL (o web nao tem). No fim:
   // valor[]/CHAVE[] posicionais.
   AJ_PLR_FORMATO,
+  AJ_PC_AUDIO, AJ_PC_PAREAR,
   AJ_N
 } OpcaoId;
 _Static_assert(DEBRID_RD == 0 && DEBRID_TB == 1 && DEBRID_PM == 2 && DEBRID_AD == 3,
@@ -1829,6 +1831,8 @@ static const Opcao OPCOES[AJ_N] = {
   ESC("Dolby Vision P7 para P8.1 (experimental)", V_LIGA, 2),
   ESC("Registro na rede local", V_LIGA, 2),                   // local: logRedeLocal
   ESC("Formato no player", V_PLR_FORMATO, 6),          // local: plrFormatoLocal
+  ESC("PC audio fallback (experimental)", V_LIGA, 2),
+  ACAO("Pair PC audio server"),
 };
 
 // Nome de cada opcao no arquivo. O formato era POSICIONAL — uma linha por
@@ -2153,6 +2157,7 @@ static const char *CHAVE[] = {
   "dv7ConversionLocal",
   "logRedeLocal",
   "plrFormatoLocal",
+  "pcAudioLocal", "-pcAudioPair",
 };
 // QUATRO VETORES PARALELOS indexados pelo mesmo enum AJ_*: OPCOES, CHAVE,
 // valor e as secoes. OPCOES ja e declarado [AJ_N], e `valor` aceita inicializacao
@@ -3693,6 +3698,13 @@ int ajustes_cw_ordem(void)            { return valor[AJ_CW_ORDEM]; }
 int ajustes_cw_retido_tambem(void)    { return lig(AJ_CW_RETIDO_TAMBEM); }
 int ajustes_ps_continuar(void)        { return lig(AJ_PS_CONTINUAR); }
 int ajustes_dts_ac3(void)             { return valor[AJ_DTS_AC3] == 1; }
+int ajustes_pc_audio(void) {
+#ifdef NV_WEBOS
+  return valor[AJ_PC_AUDIO] == 0;
+#else
+  return 0;
+#endif
+}
 // .tpk: HLS (o TS continuo e so a troca automatica de video_tpk.c) ou desligado.
 int ajustes_dts_tpk_modo(void) {
 #ifdef NV_TPK
@@ -5940,6 +5952,7 @@ static int somenteDesteAparelho(int op) {
     case AJ_CW_RETIDO_TAMBEM: /* o web nao tem a ilha */
     case AJ_PS_CONTINUAR:   /* o web nao tem este cartao; escolha desta TV */
     case AJ_AUDIO_OFFSET:   /* audio presentation calibration belongs to this TV */
+    case AJ_PC_AUDIO: case AJ_PC_PAREAR: /* LAN pairing never syncs */
     case AJ_DTS_AC3:        /* o conversor de DTS e desta TV */
     case AJ_DV_MKV:         /* o demux e o decoder sao desta TV */
     case AJ_DV7:
@@ -6874,6 +6887,7 @@ static const char *textoLeitura(int op) {
   if (op == AJ_P2P_URL) return p2pEndereco[0] ? p2pEndereco
                              : p2pmotor_disponivel() ? i18n("Nesta TV") : i18n("Não configurado");
   if (op >= AJ_JF_SERVIDOR && op <= AJ_JF_SAIR) return jfTexto(op);
+  if (op == AJ_PC_PAREAR) return pcaudio_configurado() ? pcaudio_servidor() : "Not paired";
   if (op >= AJ_EM_SERVIDOR && op <= AJ_EM_SAIR) return emTexto(op);
   if (op >= AJ_PX_ENTRAR && op <= AJ_PX_SAIR) return pxTexto(op);
   if (op == AJ_P2P_URL) return p2pEndereco[0] ? p2pEndereco : i18n("Não configurado");
@@ -9578,6 +9592,13 @@ static void eventoTela(const SDL_Event *e) {
                         299, CUR_ALFA_URL, curadoria_url()[0] ? curadoria_url() : NULL);
       return;
     }
+    if (focoOp == AJ_PC_PAREAR) {
+      stCampo = focoOp;
+      teclado_abrir_com("Pair PC audio", "Paste the pairing link from the PC page. Empty clears pairing.",
+                        190, "abcdefghijklmnopqrstuvwxyz0123456789.:/#", NULL);
+      teclado_tipo(TECLADO_TIPO_SENHA); teclado_mascarar(1);
+      return;
+    }
     if (focoOp >= AJ_JF_SERVIDOR && focoOp <= AJ_JF_SAIR) { jfAtivar(focoOp); return; }
     if (focoOp >= AJ_EM_SERVIDOR && focoOp <= AJ_EM_SAIR) { emAtivar(focoOp); return; }
     if (focoOp >= AJ_PX_ENTRAR && focoOp <= AJ_PX_SAIR) { pxAtivar(focoOp); return; }
@@ -9699,6 +9720,10 @@ void ajustes_atualizar(float dt, Uint32 agora) {
         int e = fonteregra_definir_regex(teclado_texto());
         sync_proteger_ajustes_locais();
         uxNotificar(e < 0 ? "Regex inválida: ignorada" : "Ajuste salvo nesta TV.");
+      }
+      else if (stCampo == AJ_PC_PAREAR) {
+        int ok = pcaudio_configurar(teclado_texto()); teclado_esquecer();
+        uxNotificar(ok ? "PC pairing saved on this TV." : "Invalid pairing link or settings could not be saved.");
       }
       else if (stCampo == AJ_JF_SERVIDOR)     jellyfin_definir_servidor(teclado_texto());
       else if (stCampo == AJ_EM_SERVIDOR)     emby_definir_servidor(teclado_texto());

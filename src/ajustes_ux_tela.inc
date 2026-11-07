@@ -44,6 +44,9 @@ static const Item TELA[] = {
       OPC(AJ_SELOS_PACOTE), OPC(AJ_SELOS_PACOTE_ADD), OPC(AJ_SELOS_PACOTE_REM),
     ROT("Som e vídeo desta TV"),
       OPC(AJ_DTS_AC3),
+#ifdef NV_WEBOS
+      OPC(AJ_PC_AUDIO), OPC(AJ_PC_PAREAR),
+#endif
 #ifdef NV_ANDROID
       OPC(AJ_TUNNELING),
 #endif

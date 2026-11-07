@@ -137,6 +137,7 @@
 #include "diagnostico.h"
 #include "debrid.h"
 #include "fontefalha.h"
+#include "pcaudio.h"
 #include "p2p.h"
 #include "p2pmotor.h"
 #include "player.h"
@@ -3014,6 +3015,7 @@ static void vigiarPartes(void) {
 // Vence -> o erro de fonte do player, com "A fonte nao respondeu" e as saidas
 // de sempre. O automatico ja tem o proprio prazo (tentarProximaFonteVOD).
 static void vigiarAberturaManual(void) {
+  if (pcaudio_ativo()) return;
   FontevoltaSinais g;
   Uint32 desde;
   registrarFonteVODTocando();
@@ -3302,6 +3304,13 @@ static void aliviarMemoria(void) {
   memlog_devolver();
 }
 static void tentarProximaFonteVOD(void) {
+  if (pcaudio_ativo()) {
+    if (video_falhou()) {
+      fonteVODAutomatica = 0; fonteManualDesde = 0;
+      player_erro_fonte_motivo("PC audio playback failed", video_erro_texto());
+    }
+    return;
+  }
   Uint32 desde;
   int atual, motivo = 0;
   if (!fonteVODAutomatica || player_id_canal()[0] || !player_aberto() ||
@@ -4756,6 +4765,7 @@ static void atualizarFolha(float dt, Uint32 agora) {
 // Android's live buffer end is unknown (zero). READY video that is actually
 // playing again also proves recovery; audio alone or continued buffering does not.
 static void recuperarErroFonte(void) {
+  if (pcaudio_ativo()) return;
   if ((player_aberto() || player_mini_ativo()) && player_fonte_falhou() &&
       player_tem_video() && !video_falhou() &&
       (video_buffer_fim() > 0.5 ||

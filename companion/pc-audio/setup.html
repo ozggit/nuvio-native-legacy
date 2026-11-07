@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nuvio PC Audio</title>
+<style>
+:root{color-scheme:dark;font-family:Segoe UI,system-ui,sans-serif;background:#10141d;color:#eef1f8}body{max-width:850px;margin:48px auto;padding:0 22px}h1{font-size:36px;margin-bottom:8px}h2{font-size:20px}p{line-height:1.6;color:#b9c2d6}.card{border:1px solid #303b50;background:#192131;border-radius:16px;padding:24px;margin:22px 0}label{display:block;margin:20px 0 8px;font-weight:600}input,select,textarea{box-sizing:border-box;width:100%;background:#111722;color:#fff;border:1px solid #526078;border-radius:8px;padding:12px;font:inherit}button{background:#9de2c4;color:#09281b;border:0;border-radius:8px;padding:12px 18px;margin:16px 8px 0 0;font:inherit;font-weight:600;cursor:pointer}button.secondary{background:#33415a;color:white}button:disabled{opacity:.5;cursor:wait}.note{border-left:3px solid #edc678;padding:8px 14px;background:#302a1b;color:#f5dfac}.ok{color:#9de2c4}.error{color:#ffb1a7;white-space:pre-wrap}code{overflow-wrap:anywhere}small{color:#b9c2d6}.session{border-top:1px solid #38455e;margin-top:16px;padding-top:12px}#addon{height:92px}a{color:#9de2c4}
+</style></head><body>
+<small>LOCAL PLAYBACK · VERSION 0.1</small><h1>Nuvio PC Audio</h1>
+<p>Keep browsing Kaptain and Bingecat in Nuvio. This add-on gets your AIOStreams results, copies the video and converts English multichannel audio to Dolby Digital 5.1 on this PC.</p>
+<p class="note">TV compatibility still needs a real playback test. Seeking is limited to a rolling buffer of about 12 minutes; jumping ahead, normal resume and long pauses are not supported yet. This version does not provide the full film timeline or embedded subtitle tracks. Stereo sources stay stereo.</p>
+<div class="card"><h2>1. Connect your AIOStreams</h2>
+<p>Paste the installation link from your saved AIOStreams configuration, ending in <code>/manifest.json</code>. It is saved on this PC and is never shown in logs. Keep AIOStreams’ own proxy setting off for this route.</p>
+<form id="settings"><label for="upstream">Saved AIOStreams installation link</label><input id="upstream" type="password" autocomplete="off" placeholder="https://…/manifest.json">
+<label for="base">This PC’s address on the TV’s network</label><select id="base"></select>
+<label for="language">Preferred audio</label><select id="language"><option value="eng">English</option><option value="first">Default audio track</option></select>
+<button id="save" type="submit">Save and check connection</button><div id="saved" role="status"></div></form></div>
+<div class="card"><h2>2. Add PC Audio to Nuvio</h2><p>Copy this address into Nuvio’s add-on installation field. Keep Kaptain and Bingecat. Initially keep your original AIOStreams add-on too, then choose a result labelled <strong>PC 5.1</strong> when testing.</p>
+<textarea id="addon" readonly aria-label="PC Audio add-on link"></textarea><button id="copy" class="secondary">Copy add-on link</button>
+<p id="configured"></p><p><small>The PC must remain awake and connected to the same network as the TV. If Nuvio cannot connect, open the link on your phone while connected to the same Wi-Fi. The included firewall helper allows only this port from the local network.</small></p></div>
+<div class="card"><h2>Playback status</h2><div id="sessions"></div><p id="error" class="error"></p>
+<button id="demo" class="secondary">Get local DTS test clip link</button><p id="demoResult"></p>
+<p><small>Dolby Vision and unusual remux profiles can still be rejected by the TV even with compatible audio. Video is never re-encoded. Stop a session to clear its temporary files.</small></p></div>
+<script>
+const key='__ADMIN_TOKEN__';let initialized=false;
+async function api(url,body){const r=await fetch(url,{method:body===undefined?'GET':'POST',headers:{'X-Setup-Token':key,'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});const v=await r.json();if(!r.ok)throw Error(v.error||'Request failed');return v;}
+function text(id,value){document.getElementById(id).textContent=value;}
+async function refresh(){try{const s=await api('/api/status');if(!initialized){const select=document.getElementById('base');for(const address of s.addresses){const o=document.createElement('option');o.value=address;o.textContent=address;select.append(o);}select.value=s.baseUrl;document.getElementById('language').value=s.language==='eng'?'eng':'first';initialized=true;}
+document.getElementById('addon').value=s.addonUrl;text('configured',s.configured?'AIOStreams is configured. Ready for a TV test.':'Save your AIOStreams link above before installing this add-on.');text('error',s.lastError||'');const box=document.getElementById('sessions');box.replaceChildren();if(!s.sessions.length)box.textContent='No active playback.';
+const session=s.sessions.at(-1);if(session){const div=document.createElement('div');const title=document.createElement('strong');title.textContent=session.error?'Playback needs attention':session.delivering?'Sending stream to your TV':session.loading||session.running?'Handling stream…':'Stream finished';div.append(title);const p=document.createElement('p');p.textContent=session.loading?'Preparing English audio':`${session.audio||''} · ${session.language||''}`;div.append(p);if(session.error){const e=document.createElement('p');e.className='error';e.textContent=session.error;div.append(e);}const b=document.createElement('button');b.className='secondary';b.textContent='Stop';b.onclick=async()=>{await api('/api/stop',{id:session.id});await refresh();};div.append(b);box.append(div);}
+}catch(e){text('error',e.message);}}
+document.getElementById('settings').onsubmit=async e=>{e.preventDefault();const b=document.getElementById('save');b.disabled=true;text('saved','Checking your saved configuration…');try{const r=await api('/api/config',{upstream:document.getElementById('upstream').value,baseUrl:document.getElementById('base').value,language:document.getElementById('language').value});document.getElementById('upstream').value='';text('saved',`Connected to ${r.name}.`);await refresh();}catch(e){text('saved',e.message);}finally{b.disabled=false;}};
+document.getElementById('copy').onclick=async()=>{await navigator.clipboard.writeText(document.getElementById('addon').value);text('configured','Copied. Paste into Nuvio’s add-on installation field.');};
+document.getElementById('demo').onclick=async()=>{try{const r=await api('/api/demo',{});text('demoResult',r.url);}catch(e){text('demoResult',e.message);}};
+refresh();setInterval(refresh,5000);
+</script></body></html>

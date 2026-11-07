@@ -1,0 +1,67 @@
+name: PC Audio test IPK
+on:
+  push:
+    branches: [codex/lg-pc-audio-5-1]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pc-audio-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    env:
+      NUVIO_CONTAINER_RUNTIME: docker
+      NUVIO_BUILD_PLATFORM: linux/amd64
+      NUVIO_BUILD_JOBS: '3'
+      NV_JOBS: '2'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Native session tests
+        run: |
+          cc -DNV_WEBOS -Isrc -Wall -Wextra -Werror tests/pcaudio.c src/pcaudio.c src/js.c -lpthread -lm -o /tmp/pcaudio-test
+          /tmp/pcaudio-test
+          git diff --check
+      - name: Packaging and Rust tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/webos-cli" @webos-tools/cli@3.2.1
+          echo "NUVIO_ARES_PACKAGE=$RUNNER_TEMP/webos-cli/node_modules/.bin/ares-package" >> "$GITHUB_ENV"
+          echo "NUVIO_P2P_MOTOR=$RUNNER_TEMP/nuvio-p2p" >> "$GITHUB_ENV"
+          echo "RUSTUP_HOME=$HOME/.rustup" >> "$GITHUB_ENV"
+          echo "CARGO_HOME=$HOME/.cargo" >> "$GITHUB_ENV"
+          rustup toolchain install 1.88.0 --profile minimal
+          rustup default 1.88.0
+          rustup target add armv7-unknown-linux-gnueabi
+          cargo fetch --manifest-path rust/mkvcore/Cargo.toml --locked
+          cargo fetch --manifest-path tools/dv7/Cargo.toml --locked
+      - name: Public release application settings
+        run: python3 tools/pc-audio-public-config.py
+      - name: Build full webOS SDK with local audio and subtitle support
+        run: |
+          docker build --platform linux/amd64 -t nuvio-webos-sdk \
+            --build-arg SDK_URL=https://github.com/openlgtv/buildroot-nc4/releases/download/webos-a38c582/arm-webos-linux-gnueabi_sdk-buildroot-x86_64.tar.gz tools
+          container=$(docker create nuvio-webos-sdk)
+          docker cp "$container:/opt/arm-webos-linux-gnueabi_sdk-buildroot" "$RUNNER_TEMP/sdk"
+          docker rm "$container"
+          "$RUNNER_TEMP/sdk/relocate-sdk.sh"
+          echo "$RUNNER_TEMP/sdk/bin" >> "$GITHUB_PATH"
+      - name: Preserve embedded P2P support
+        run: bash tools/p2p-motor/build-arm.sh "$NUVIO_P2P_MOTOR/arm"
+      - name: Build separate PC Audio app without deployment
+        run: |
+          chmod +x tools/*.sh tools/p2p-motor/*.sh
+          bash tools/env.sh --require-core >/dev/null
+          bash tools/build-pc-audio.sh --output "$GITHUB_WORKSPACE/build/pc-audio"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nuvio-Legacy-PC-Audio-2.0.81
+          path: |
+            build/pc-audio/*.ipk
+            build/pc-audio/*.sha256
+            build/pc-audio/*.json
+          if-no-files-found: error
+          retention-days: 14

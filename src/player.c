@@ -26,6 +26,7 @@
 //      congelado sem saber o que houve.
 #include "horafmt.h"
 #include "player.h"
+#include "pcaudio.h"
 #include "memlog.h"
 #include "dvtela.h"
 #include "abrecine.h"
@@ -1877,6 +1878,7 @@ void player_abrir(int indiceCatalogo, const char *url) {
   loadEm = SDL_GetTicks();
   { char px[96];
     if (url && *url) { memlog_evento("load"); memQuadroPendente = 1; }
+    pcaudio_armar(!ehCanal() && ajustes_pc_audio());
     comVideo = (url && *url && video_tocar(proxyts_resolver(url, px, sizeof px))); }
   zerarAssistido();
   mkvass_video_aberto(comVideo);
@@ -2060,6 +2062,7 @@ static int preTituloLegendaUsar(const char *url) {
 
 static void tocarFonteInterno(const char *url);
 static void tocarFonteInterno(const char *url) {
+  pcaudio_armar(!ehCanal() && ajustes_pc_audio());
   marco("abrir: url ao pipeline");
   skipLiberado = 0;
   loadEm = SDL_GetTicks();   // #202: do pipeline ao primeiro quadro ("[player] load->1o quadro")
