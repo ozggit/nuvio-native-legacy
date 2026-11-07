@@ -64,12 +64,16 @@ app['version']='2.0.81';app['icon']='icon-pcaudio.png';app['largeIcon']='icon-la
 tizen=target/'tools'/'tizen-config.xml'
 tizen.write_text(tizen.read_text().replace('2.0.8','2.0.81'))
 metadata.write_text(json.dumps(app,ensure_ascii=False,indent=2)+'\n')
+# arm.sh uses both direct compiler arguments and a response file. Put the
+# string-valued identity in the private header to avoid double quote parsing.
+identity=target/'src'/'app_id.h'
+identity.write_text('#define NV_APP_ID "space.nuvio.native.legacy.pcaudio"\n'+identity.read_text())
 PY
 # The normal SDK includes DTS; the debug helper only changes package identity.
 export NUVIO_CONTAINER_RUNTIME="$runtime" NUVIO_SDK_IMAGE="$image" NUVIO_ARES_PACKAGE="$packager"
 export NUVIO_BUILD_PLATFORM="${NUVIO_BUILD_PLATFORM:-linux/amd64}"
 export NUVIO_DTS_FFMPEG=1
-export NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-} -DNV_PC_AUDIO_TEST -DNV_APP_ID=\"space.nuvio.native.legacy.pcaudio\""
+export NUVIO_EXTRA_CFLAGS="${NUVIO_EXTRA_CFLAGS:-} -DNV_PC_AUDIO_TEST"
 # Read the original configuration by absolute path; never copy it into the package.
 if [ -n "${NUVIO_PROPERTIES:-}" ]; then
   export NUVIO_PROPERTIES=$(python3 -c 'import os,sys;print(os.path.abspath(sys.argv[1]))' "$NUVIO_PROPERTIES")

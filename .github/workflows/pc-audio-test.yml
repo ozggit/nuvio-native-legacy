@@ -58,8 +58,18 @@ jobs:
           docker rm "$container"
           "$RUNNER_TEMP/sdk/relocate-sdk.sh"
           echo "$RUNNER_TEMP/sdk/bin" >> "$GITHUB_PATH"
+      - uses: actions/cache/restore@v4
+        id: p2p-cache
+        with:
+          path: ${{ runner.temp }}/nuvio-p2p/arm
+          key: pc-audio-p2p-${{ hashFiles('tools/p2p-motor/*.sh', 'tools/p2p-motor/poc.c', 'tools/Dockerfile') }}
       - name: Preserve embedded P2P support
         run: bash tools/p2p-motor/build-arm.sh "$NUVIO_P2P_MOTOR/arm"
+      - uses: actions/cache/save@v4
+        if: steps.p2p-cache.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/nuvio-p2p/arm
+          key: ${{ steps.p2p-cache.outputs.cache-primary-key }}
       - name: Build separate PC Audio app without deployment
         run: |
           chmod +x tools/*.sh tools/p2p-motor/*.sh
