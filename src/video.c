@@ -660,6 +660,9 @@ static int dtsNativePending;
 static VideoFaixa dtsNativeTarget;
 static char dtsLegUrlAntes[1024];
 static char cabsHttp[512];
+static int pcEligible, pcConverted, pcPaused;
+static double pcOffset, pcDuration, pcSeek;
+static Uint32 pcSeekAt, pcLoadAt;
 static int iniciarDts(int stream);
 static void bombearDts(void);
 static int dtsLiberadoNestaTv(void);
@@ -1308,6 +1311,7 @@ static int eventoPayload(const char *p, unsigned minhaSessao) {
     // O pipeline e novo: o estilo da legenda nao sobrevive ao load anterior.
     aplicarEstilo();
     pronto = 1;
+    if (pcaudio_ativo() && pcPaused) video_pausar(1);
     if (recarregarPausa >= 0) {
       int pausado = recarregarPausa;
       recarregarPausa = -1;
@@ -2333,9 +2337,6 @@ int  video_reconectando(void) {
   return nv_recon_ativa(&recon) && (recon.pendente || !pronto) ? recon.tentativa : 0;
 }
 
-static int pcEligible, pcConverted, pcPaused;
-static double pcOffset, pcDuration, pcSeek;
-static Uint32 pcSeekAt, pcLoadAt;
 static int videoTocarLocal(const char *url);
 int video_tocar(const char *url) {
   pcaudio_parar();
@@ -2393,7 +2394,9 @@ static int pcUnsupported(const VideoFaixa *track) {
   if (video_faixa_dts(track)) return 1;
   if (!track) return 0;
   char codec[128]; snprintf(codec,sizeof codec,"%s %s",track->codec,track->rotulo);
-  for (char *p=codec;*p;p++) *p=(char)tolower((unsigned char)*p);
+  char *out = codec;
+  for (char *p=codec;*p;p++) if (*p!=' ' && *p!='_' && *p!='-') *out++=(char)tolower((unsigned char)*p);
+  *out=0;
   return strstr(codec,"truehd") || strstr(codec,"true hd") || strstr(codec,"mlp");
 }
 static int pcPump(void) {
@@ -2430,7 +2433,6 @@ static int pcPump(void) {
       snprintf(dtsSaida,sizeof dtsSaida,"PC → AC-3");
     }
     pcLoadAt = SDL_GetTicks();
-    if (pcPaused) recarregarPausa = 1;
     if (!opened) { falhou = 1; snprintf(erroTexto,sizeof erroTexto,"TV could not open the PC audio stream."); }
   }
   if (pcaudio_pendente()) return 1;

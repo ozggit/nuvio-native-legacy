@@ -40,10 +40,19 @@ jobs:
           cargo fetch --manifest-path tools/dv7/Cargo.toml --locked
       - name: Public release application settings
         run: python3 tools/pc-audio-public-config.py
+      - uses: docker/setup-buildx-action@v3
       - name: Build full webOS SDK with local audio and subtitle support
+        uses: docker/build-push-action@v6
+        with:
+          context: tools
+          platforms: linux/amd64
+          load: true
+          tags: nuvio-webos-sdk:latest
+          build-args: SDK_URL=https://github.com/openlgtv/buildroot-nc4/releases/download/webos-a38c582/arm-webos-linux-gnueabi_sdk-buildroot-x86_64.tar.gz
+          cache-from: type=gha,scope=pc-audio-sdk
+          cache-to: type=gha,scope=pc-audio-sdk,mode=max
+      - name: Make cross compiler available to host Rust builds
         run: |
-          docker build --platform linux/amd64 -t nuvio-webos-sdk \
-            --build-arg SDK_URL=https://github.com/openlgtv/buildroot-nc4/releases/download/webos-a38c582/arm-webos-linux-gnueabi_sdk-buildroot-x86_64.tar.gz tools
           container=$(docker create nuvio-webos-sdk)
           docker cp "$container:/opt/arm-webos-linux-gnueabi_sdk-buildroot" "$RUNNER_TEMP/sdk"
           docker rm "$container"
