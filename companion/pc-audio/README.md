@@ -2,7 +2,8 @@
 
 This companion is for the separate **Nuvio Legacy PC Audio** test app, based on
 Nuvio Legacy 2.0.8. The test IPK uses ID `space.nuvio.native.legacy.pcaudio`, version
-`2.0.84`, and a green/cyan PC-badged icon. It does not replace the original app.
+`2.0.85`, with a large **PC AUDIO** label and an amber computer/sound-wave
+symbol beside the Nuvio play mark. It does not replace the original app.
 Install this IPK manually in webOS Dev Manager over the earlier PC Audio test
 app; the app ID stays the same. The original Nuvio Legacy stays separate.
 
@@ -75,7 +76,7 @@ control. The native worker's generation/stop/seek tests also ran on the TV CPU.
 The user confirmed actual playback with 2.0.83: Nuvio reports AC-3 5.1 and Sonos
 reports Dolby Digital 5.1. This confirms that tested stream, not every source.
 Real high-bitrate remuxes, HDR/Dolby Vision, long pauses and resume still need
-on-device verification. The 2.0.84 banner and Back flow need a manual TV check.
+on-device verification. The 2.0.85 banner and Back flow need a manual TV check.
 
 Embedded subtitles and changing the audio track are not implemented in the PC
 transport. External subtitle timing after a PC seek is unverified. AC-3 does not

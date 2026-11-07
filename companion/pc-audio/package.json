@@ -1,6 +1,6 @@
 {
   "name": "nuvio-pc-audio",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "scripts": { "start": "node server.mjs", "test": "node --test test/*.test.mjs" },

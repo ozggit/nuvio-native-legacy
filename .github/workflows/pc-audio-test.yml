@@ -82,7 +82,7 @@ jobs:
           bash tools/build-pc-audio.sh --output "$GITHUB_WORKSPACE/build/pc-audio"
       - uses: actions/upload-artifact@v4
         with:
-          name: Nuvio-Legacy-PC-Audio-2.0.84
+          name: Nuvio-Legacy-PC-Audio-2.0.85
           path: |
             build/pc-audio/*.ipk
             build/pc-audio/*.sha256
